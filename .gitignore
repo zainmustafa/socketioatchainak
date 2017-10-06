@@ -28,3 +28,5 @@ server/node_modules
 
 # ide
 .idea
+
+.DS_Store
