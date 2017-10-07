@@ -1,16 +1,79 @@
 import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
+import {Button} from 'react-bootstrap'
+
+// Import socket.IO
+
+import openSocket from 'socket.io-client';
+const socket = openSocket('http://localhost:3001');
 
 class App extends Component {
-    state = {users: []};
 
-    componentDidMount() {
-        fetch('/users')
-            .then(res => res.json())
-            .then(users => this.setState({ users }));
+    constructor(props){
+        super(props);
+        this.state = {
+            message : '',
+            name : '',
+            messages: []
+        };
+
+        this.updateChat = this.updateChat.bind(this);
+        this.clearChat = this.clearChat.bind(this);
+        this.sendMessage = this.sendMessage.bind(this);
+        this.handleChange = this.handleChange.bind(this);
     }
 
+    componentDidMount() {
+        // Receive data
+        socket.on('output',this.updateChat);
+        // Clear Message
+        socket.on('cleared', this.updateChat);
+    }
+
+
+    updateChat(data){
+
+        let chat = this.state.messages;
+
+        if(typeof data === 'object'){
+            if(data.length){
+                chat = data;
+            }else {
+                chat = chat.push(data);
+            }
+        }else {
+            chat = [];
+        }
+
+
+        this.setState({
+            messages : chat
+        })
+    }
+
+    sendMessage(){
+        socket.emit('input', {
+            name : this.state.name,
+            message : this.state.message
+        });
+    }
+
+    clearChat(){
+        socket.emit('clear',{});
+    }
+
+    handleChange(event){
+        if(event.key === 'Enter' && event.shiftKey === false){
+            this.sendMessage();
+            this.setState({
+                message : ''
+            });
+            event.preventDefault();
+        }
+        else
+            this.setState({message: event.target.value});
+    }
     render() {
         return (
             <div className="App">
@@ -18,10 +81,21 @@ class App extends Component {
                     <img src={logo} className="App-logo" alt="logo" />
                     <h1 className="App-title">Socet.IO at Chainak</h1>
                 </header>
-                <h1>Users</h1>
-                {this.state.users.map(user =>
-                    <div key={user.id}>{user.username}</div>
-                )}
+
+                {/*Chat View*/}
+                <h1>Socket.IO Chat</h1>
+                <Button bsStyle="danger" active onClick={this.clearChat}>Clear Chat</Button>
+                <br/>
+                <input className="username" placeholder="name" value={this.state.name} onChange={(event)=>{this.setState({name: event.target.value})}} />
+                <div className="chatArea">
+                    {
+                        this.state.messages.map(user =>
+                        <div key={user._id}>{user.name}: {user.message}</div>)
+                    }
+
+                </div>
+                <textarea placeholder="Enter message..." value={this.state.message} onKeyPress={this.handleChange} onChange={this.handleChange}/>
+                <Button bsStyle="primary" onClick={this.sendMessage}>Send</Button>
             </div>
         );
     }
