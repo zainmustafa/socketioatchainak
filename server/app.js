@@ -1,46 +1,65 @@
-var express = require('express');
-var path = require('path');
-var favicon = require('serve-favicon');
-var logger = require('morgan');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
+const mongo = require('mongodb').MongoClient;
+const client = require('socket.io').listen(3001).sockets;
 
-var index = require('./routes/index');
-var users = require('./routes/users');
+// Connect to mongo
+mongo.connect('mongodb://127.0.0.1/chainak', function(err, db){
+    if(err){
+        throw err;
+    }
 
-var app = express();
+    console.log('MongoDB connected...');
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+    // Connect to Socket.io
+    client.on('connection', function(socket){
+        let chat = db.collection('chats');
 
-// uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger('dev'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+        console.log('Client joined with id ',socket.id);
 
-app.use('/', index);
-app.use('/users', users);
+        // Create function to send status
+        sendStatus = function(s){
+            socket.emit('status', s);
+        };
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  var err = new Error('Not Found');
-  err.status = 404;
-  next(err);
+        // Get chats from mongo collection
+        chat.find().limit(100).sort({_id:1}).toArray(function(err, res){
+            if(err){
+                throw err;
+            }
+
+            // Emit the messages
+            socket.emit('output', res);
+        });
+
+        // Handle input events
+        socket.on('input', function(data){
+            let name = data.name;
+            let message = data.message;
+
+            // Check for name and message
+            if(name == '' || message == ''){
+                // Send error status
+                sendStatus('Please enter a name and message');
+            } else {
+                // Insert message
+                chat.insertOne({name: name, message: message}, function(err, res1){
+                    client.emit('output', res1.ops[0]);
+
+                    // Send status object
+                    sendStatus({
+                        message: 'Message sent',
+                        clear: true
+                    });
+                });
+            }
+        });
+
+        // Handle clear
+        socket.on('clear', function(){
+            // Remove all chats from collection
+            chat.deleteMany({}, function(){
+                // Emit cleared
+                socket.emit('cleared');
+            });
+        });
+    });
 });
-
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-});
-
-module.exports = app;
