@@ -2,15 +2,14 @@
 
 ## Prerequisites
 
-### Mongodb or mlab
-### Node.js 
+ Mongodb or mlab
+ Node.js 
 
 ## Install Dependencies
-Run the following command in client and server folder.
-npm install 
+ Run the following command in client and server folder.
+ npm install 
 
 ## Run Application
-
-npm start
-
-Run both client and server at the same time. 
+ Run both client and server at the same time with the following command. 
+ npm start
+ 
