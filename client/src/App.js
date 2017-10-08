@@ -22,30 +22,30 @@ class App extends Component {
         this.clearChat = this.clearChat.bind(this);
         this.sendMessage = this.sendMessage.bind(this);
         this.handleChange = this.handleChange.bind(this);
+        this.showMessages = this.showMessages.bind(this);
     }
 
     componentDidMount() {
-        // Receive data
+        // Receive data at first
+        socket.on('messages',this.showMessages);
+
+        // Receive after changes
         socket.on('output',this.updateChat);
+
         // Clear Message
         socket.on('cleared', this.updateChat);
     }
 
+    showMessages(data){
+        this.setState({
+            messages : data ? data : []
+        })
+    }
 
     updateChat(data){
 
         let chat = this.state.messages;
-
-        if(typeof data === 'object'){
-            if(data.length){
-                chat = data;
-            }else {
-                chat = chat.push(data);
-            }
-        }else {
-            chat = [];
-        }
-
+        data ? chat.push(data) : chat = [];
 
         this.setState({
             messages : chat
@@ -74,6 +74,7 @@ class App extends Component {
         else
             this.setState({message: event.target.value});
     }
+
     render() {
         return (
             <div className="App">
@@ -83,6 +84,7 @@ class App extends Component {
                 </header>
 
                 {/*Chat View*/}
+
                 <h1>Socket.IO Chat</h1>
                 <Button bsStyle="danger" active onClick={this.clearChat}>Clear Chat</Button>
                 <br/>

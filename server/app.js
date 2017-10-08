@@ -26,8 +26,8 @@ mongo.connect('mongodb://127.0.0.1/chainak', function(err, db){
                 throw err;
             }
 
-            // Emit the messages
-            socket.emit('output', res);
+            // Emit all the messages
+            socket.emit('messages', res);
         });
 
         // Handle input events
@@ -58,7 +58,7 @@ mongo.connect('mongodb://127.0.0.1/chainak', function(err, db){
             // Remove all chats from collection
             chat.deleteMany({}, function(){
                 // Emit cleared
-                socket.emit('cleared');
+                client.emit('cleared');
             });
         });
     });
